@@ -17,6 +17,32 @@ const newPassword = ref('')
 const pwMsg = ref('')
 const pwError = ref('')
 
+const fileInput = ref(null)      
+const uploading = ref(false)
+
+function pickFile() {
+  fileInput.value.click()        
+}
+
+async function uploadAvatar(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const formData = new FormData()
+  formData.append('avatar', file)   
+
+  uploading.value = true
+  try {
+    const { data } = await api.post('/auth/avatar/', formData)
+    profile.value.avatar = data.avatar   
+  } catch (e) {
+    error.value = 'Не удалось загрузить аватар'
+  } finally {
+    uploading.value = false
+    event.target.value = ''   
+  }
+}
+
 async function fetchProfile() {
   loading.value = true
   try {
@@ -77,14 +103,30 @@ onMounted(fetchProfile)
     <h1 class="text-2xl font-bold">Личный кабинет</h1>
 
     <!-- статистика -->
-    <div class="grid grid-cols-2 gap-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5 text-center">
-        <div class="text-3xl font-bold text-indigo-600">{{ profile.boards_count }}</div>
-        <div class="text-sm text-gray-500 mt-1">проектов</div>
+    <div class="flex items-center gap-6">
+      <div class="relative">
+        <img v-if="profile.avatar" :src="profile.avatar" alt="avatar"
+          class="w-20 h-20 rounded-full object-cover" />
+        <div v-else class="w-20 h-20 rounded-full bg-indigo-500 flex items-center justify-center text-white text-2xl font-bold">
+          {{ profile.username.charAt(0).toUpperCase() }}
+        </div>
+        <button @click="pickFile" :disabled="uploading"
+          class="absolute -bottom-1 -right-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full w-7 h-7 flex items-center justify-center text-sm shadow hover:bg-gray-50">
+          {{ uploading ? '…' : '📷' }}
+        </button>
+        <!-- скрытый input, открывается по клику на 📷 -->
+        <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="uploadAvatar" />
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5 text-center">
-        <div class="text-3xl font-bold text-indigo-600">{{ profile.tasks_count }}</div>
-        <div class="text-sm text-gray-500 mt-1">задач</div>
+
+      <div class="grid grid-cols-2 gap-4 flex-1">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5 text-center">
+          <div class="text-3xl font-bold text-indigo-600">{{ profile.boards_count }}</div>
+          <div class="text-sm text-gray-500 mt-1">проектов</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5 text-center">
+          <div class="text-3xl font-bold text-indigo-600">{{ profile.tasks_count }}</div>
+          <div class="text-sm text-gray-500 mt-1">задач</div>
+        </div>
       </div>
     </div>
 
