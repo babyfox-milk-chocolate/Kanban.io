@@ -2,12 +2,14 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { reactive } from 'vue'
+import { useProjectsStore } from '../stores/projects'
 import draggable from 'vuedraggable'
 import api from '../api/axois'
 
 const route = useRoute()
 
-const board = ref(null)
+const store = useProjectsStore()
+const board = computed(() => store.projects.find((p) => p.id == route.params.id))
 const tasks = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -69,18 +71,23 @@ function distribute() {
   board_.done = tasks.value.filter((t) => t.status === 'done' && match(t))
 }
 
+function syncColumns() {
+  const q = search.value.trim().toLowerCase()
+  const match = (t) => !q || t.title.toLowerCase().includes(q)
+  board_.todo = tasks.value.filter((t) => t.status === 'todo' && match(t))
+  board_.in_progress = tasks.value.filter((t) => t.status === 'in_progress' && match(t))
+  board_.done = tasks.value.filter((t) => t.status === 'done' && match(t))
+}
+
 async function fetchData() {
   loading.value = true
-  error.value = ''
   try {
-    const [boardRes, tasksRes] = await Promise.all([
-      api.get(`/boards/${route.params.id}/`),
-      api.get(`/tasks/?board=${route.params.id}`),
-    ])
-    board.value = boardRes.data
-    tasks.value = tasksRes.data
-    distribute()
+    if (store.projects.length === 0) await store.fetch()   // на случай прямого захода
+    const { data } = await api.get(`/tasks/?board=${route.params.id}`)
+    tasks.value = data
+    syncColumns()
   } catch (e) {
+    console.log(e)
     error.value = 'Не удалось загрузить данные'
   } finally {
     loading.value = false
@@ -111,6 +118,7 @@ async function createTask(status) {
       due_date: newDue.value || null,   // пустая строка → null
     })
     tasks.value.push(data)
+    board_[status].push(data)
     newTitle.value = ''
     newDue.value = ''
     addingTo.value = null
@@ -123,6 +131,9 @@ async function deleteTask(id) {
   try {
     await api.delete(`/tasks/${id}/`)
     tasks.value = tasks.value.filter((t) => t.id !== id)
+    for(const key of ['todo', 'in_progress', 'done']){
+      board_[key] = board_[key].filter((t) => t.id !== id)
+    }
   } catch (e) {
     error.value = 'Не удалось удалить задачу'
   }

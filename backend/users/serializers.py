@@ -9,8 +9,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'password', 'date__joined', 'boards_count', 'tasks_count')
-        read_only_fields = ('id', 'date__joined')
+        fields = ('id', 'username', 'email', 'password', 'date_joined', 'boards_count', 'tasks_count')
+        read_only_fields = ('id', 'date_joined')
 
     def create(self, validated_data):
         # create_user() хеширует пароль. обычный create() сохранил бы пароль в открытом виде
