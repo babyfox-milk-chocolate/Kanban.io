@@ -35,4 +35,6 @@ def board_b(user_b):
 def task_a(board_a):
     return Task.objects.create(board=board_a, title='test_user1 task', status='todo')
 
-
+@pytest.fixture
+def task_b(board_b):
+    return Task.objects.create(board=board_b, title="test_user2 task", status="todo")
